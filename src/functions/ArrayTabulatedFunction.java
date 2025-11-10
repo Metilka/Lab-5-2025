@@ -266,48 +266,37 @@ public class ArrayTabulatedFunction implements TabulatedFunction, java.io.Serial
     public boolean equals(Object o) { // Равенство, если длина и все (x,y) совпадают
         if (this == o) return true;
         // Быстрый путь
-        if (o != null && o.getClass() == ArrayTabulatedFunction.class) {
-            ArrayTabulatedFunction that = (ArrayTabulatedFunction) o;
-            if (this.size != that.size) return false;
-            for (int i = 0; i < this.size; ++i) {
-                FunctionPoint a = this.points[i];
-                FunctionPoint b = that.points[i];
-                if (Double.compare(a.getX(), b.getX()) != 0) return false; // строгое сравнение double
-                if (Double.compare(a.getY(), b.getY()) != 0) return false;
-            }
-            return true;
+        if (o instanceof ArrayTabulatedFunction other) {
+             // Если разное количество точек - функции не равны
+        if (this.size != other.size) return false;
+        for (int i = 0; i < this.size; ++i) {
+                // Используем встроенный метод equals точек, который учитывает погрешность EPSILON
+            if (!this.points[i].equals(other.points[i])) return false;
         }
-        // Универсальный путь - любой TabulatedFunction сверяем через интерфейс
-        if (o instanceof TabulatedFunction) {
-            TabulatedFunction tf = (TabulatedFunction) o;
-            if (this.size != tf.getPointsCount()) return false;
-            for (int i = 0; i < this.size; ++i) {
-                FunctionPoint a = this.points[i];
-                FunctionPoint b = tf.getPoint(i);
-                if (Double.compare(a.getX(), b.getX()) != 0) return false;
-                if (Double.compare(a.getY(), b.getY()) != 0) return false;
-            }
-            return true;
-        }
-        return false;
+        return true;
     }
+    // Универсальный путь: сравнение с любой реализацией TabulatedFunction.
+    if (o instanceof TabulatedFunction tf) {
+        if (this.size != tf.getPointsCount()) return false; // Проверяем совпадение количества точек
+        // Сравниваем точки через интерфейсные методы
+        for (int i = 0; i < this.size; ++i) {
+            FunctionPoint otherPoint = new FunctionPoint(tf.getPointX(i), tf.getPointY(i));
+            if (!this.points[i].equals(otherPoint)) return false;
+        }
+        return true;
+    }
+    return false;
+}
 
-    @Override
-    public int hashCode() { // XOR всех точек
-        int h = size; // учитываем размер, чтобы {(-1,1),(0,0),(1,1)} != {(-1,1),(1,1)}
-        for (int i = 0; i < size; ++i) {
-            FunctionPoint p = points[i];
-            long xb = Double.doubleToLongBits(p.getX()); // точные биты double
-            long yb = Double.doubleToLongBits(p.getY());
-            int xLow  = (int) xb;
-            int xHigh = (int) (xb >>> 32);
-            int yLow  = (int) yb;
-            int yHigh = (int) (yb >>> 32);
-            int ph = xLow ^ xHigh ^ yLow ^ yHigh;  // хеш одной точки
-            h ^= (ph << 1) | (ph >>> 31);          // ротация влево на 1 бит, а потом применяется XOR
-        }
-        return h;
+   @Override
+public int hashCode() {
+    int h = size; // учитываем размер, чтобы {(-1,1),(0,0),(1,1)} != {(-1,1),(1,1)}
+    for (int i = 0; i < size; ++i) {
+        int ph = points[i].hashCode();                 // берём хеш точки
+        h ^= Integer.rotateLeft(ph, (i & 15));
     }
+    return h;
+}
 
     @Override
     public ArrayTabulatedFunction clone() { // клонирование - новый массив и новые точки

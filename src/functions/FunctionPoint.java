@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 public class FunctionPoint implements Serializable, Cloneable { // делаем точку клонируемой
     private static final long serialVersionUID = 1L;
+    private static final double EPSILON = 1e-9;
 
     private double x;
     private double y;
@@ -45,20 +46,32 @@ public class FunctionPoint implements Serializable, Cloneable { // делаем 
         if (o == null || o.getClass() != FunctionPoint.class) return false;
         FunctionPoint that = (FunctionPoint) o;
         // сравнение чисел типа double
-        return Double.compare(this.x, that.x) == 0 &&
-                Double.compare(this.y, that.y) == 0;
+        return Math.abs(this.x - that.x) <= EPSILON
+                && Math.abs(this.y - that.y) <= EPSILON;
     }
 
     @Override
     public int hashCode() { // хэш из битов double через XOR
-        // XOR из битов double -> long -> два int → XOR
-        long xb = Double.doubleToLongBits(x);
-        long yb = Double.doubleToLongBits(y);
+        // округляем до ближайшего кратного EPSILON
+        double qx = Math.rint(x / EPSILON) * EPSILON;
+        double qy = Math.rint(y / EPSILON) * EPSILON;
+        // Нормализуем нули, чтобы +0.0 и -0.0 давали одинаковый хеш
+        if (qx == 0.0) qx = 0.0;
+        if (qy == 0.0) qy = 0.0;
+             // Преобразуем double в long для получения точного битового представления
+        long xb = Double.doubleToLongBits(qx);
+        long yb = Double.doubleToLongBits(qy);
+
+            // Разбиваем 64-битные значения на две 32-битные части
         int xLow = (int) (xb);
         int xHigh = (int) (xb >>> 32);
         int yLow = (int) (yb);
         int yHigh = (int) (yb >>> 32);
-        return xLow ^ xHigh ^ yLow ^ yHigh;
+        int h = 31;
+        h ^= xLow ^ xHigh;
+        h = Integer.rotateLeft(h, 5);
+        h ^= yLow ^ yHigh;
+        return h;
     }
 
     @Override   // функция клонирования точки

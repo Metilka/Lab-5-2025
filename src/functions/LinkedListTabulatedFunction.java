@@ -318,61 +318,37 @@ public boolean equals(Object o) {
     if (this == o) return true;
 
     // Оптимизированная проверка для объектов того же класса
-    if (o != null && o.getClass() == LinkedListTabulatedFunction.class) {
-        LinkedListTabulatedFunction that = (LinkedListTabulatedFunction) o;
-
-        // Если разное количество точек делаем вывод, что функции не равны
-        if (this.size != that.size) return false;
-
-        // Последовательно сравниваем все точки
-        FunctionNode thisNode = this.head.next;
-        FunctionNode thatNode = that.head.next;
-
-        for (int i = 0; i < size; i++) {
-            // Точное сравнение координат для соблюдения equals
-            if (Double.compare(thisNode.point.getX(), thatNode.point.getX()) != 0) return false;
-            if (Double.compare(thisNode.point.getY(), thatNode.point.getY()) != 0) return false;
-            thisNode = thisNode.next;
-            thatNode = thatNode.next;}
+    if (o instanceof LinkedListTabulatedFunction other) {
+        int n = this.getPointsCount();
+        if (n != other.getPointsCount()) return false;
+        for (int i = 0; i < n; ++i) {
+            if (!this.getPoint(i).equals(other.getPoint(i))) return false;
+        }
         return true;
     }
-    // Универсальная проверка для любых реализаций TabulatedFunction
-    if (o instanceof TabulatedFunction) {
-        TabulatedFunction otherFunction = (TabulatedFunction) o;
-        if (this.size != otherFunction.getPointsCount()) return false;
-        // Сравниваем точки через интерфейсные методы
-        FunctionNode thisNode = this.head.next;
-        for (int i = 0; i < size; ++i) {
-            FunctionPoint otherPoint = otherFunction.getPoint(i);
-            if (Double.compare(thisNode.point.getX(), otherPoint.getX()) != 0) return false;
-            if (Double.compare(thisNode.point.getY(), otherPoint.getY()) != 0) return false;
-            thisNode = thisNode.next;}
+    // Универсальный путь: с любым TabulatedFunction.
+    if (o instanceof TabulatedFunction tf) {
+        int n = this.getPointsCount();
+        if (n != tf.getPointsCount()) return false;
+        for (int i = 0; i < n; ++i) {
+            FunctionPoint otherPoint = new FunctionPoint(tf.getPointX(i), tf.getPointY(i));
+            if (!this.getPoint(i).equals(otherPoint)) return false;
+        }
         return true;
     }
-    return false; // Объект другого типа
+    return false;
 }
 
 @Override
-public int hashCode() {     // Вычисляем хеш код на основе всех точек функции
-    int hash = size; // Начинаем с размера
-    FunctionNode current = head.next;
+public int hashCode() {
+    int h = size; // учитываем размер, чтобы различать функции разной длины
+    FunctionNode cur = head.next;
     for (int i = 0; i < size; ++i) {
-        // Преобразуем double в long для получения точного битового представления
-        long xBits = Double.doubleToLongBits(current.point.getX());
-        long yBits = Double.doubleToLongBits(current.point.getY());
-        // Разбиваем 64-битные значения на две 32-битные части
-        int xLow = (int) xBits;
-        int xHigh = (int) (xBits >>> 32);
-        int yLow = (int) yBits;
-        int yHigh = (int) (yBits >>> 32);
-        // Комбинируем хеши координат точки
-        int pointHash = xLow ^ xHigh ^ yLow ^ yHigh;
-        // Вращаем биты и добавляем к общему хешу для лучшего распределения
-        hash ^= (pointHash << 1) | (pointHash >>> 31);
-
-        current = current.next;
+        int ph = cur.point.hashCode();
+        h ^= Integer.rotateLeft(ph, (i & 15));
+        cur = cur.next;
     }
-    return hash;
+    return h;
 }
 
 @Override
